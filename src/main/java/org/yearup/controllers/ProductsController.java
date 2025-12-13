@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("products")
+@RequestMapping("/products") // FIX: added leading "/" so routes are consistently /products
 @CrossOrigin
 public class ProductsController
 {
@@ -35,12 +35,17 @@ public class ProductsController
         {
             return productDao.search(categoryId, minPrice, maxPrice, subCategory);
         }
+        catch(ResponseStatusException ex)
+        {
+            // FIX: don't convert known HTTP errors into 500
+            throw ex;
+        }
         catch(Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
-    @GetMapping("{id}")
+    @GetMapping("/{id}")// FIX: add leading "/" for clarity/consistency
     @PreAuthorize("permitAll()")
     public Product getById(@PathVariable int id )
     {
@@ -50,6 +55,11 @@ public class ProductsController
             if(product == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             return product;
+        }
+        catch(ResponseStatusException ex)
+        {
+            // FIX: preserve 404 (and other) statuses
+            throw ex;
         }
         catch(Exception ex)
         {
@@ -64,19 +74,24 @@ public class ProductsController
         {
             return productDao.create(product);
         }
+        catch(ResponseStatusException ex)
+        {
+            // FIX: preserve any explicit HTTP statuses
+            throw ex;
+        }
         catch(Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
 
-    @PutMapping("{id}")
+    @PutMapping("/{id}")// FIX
     @PreAuthorize("hasRole('ADMIN')") // firs bugs was role_Admin
     public void updateProduct(@PathVariable int id, @RequestBody Product product)
     {
         try
         {
-            // productDao.create(product); ( we need to change this) i change line 83
+            // FIX: update should call update, not create
             productDao.update(id, product);
         }
         catch(Exception ex)
