@@ -7,6 +7,7 @@ import org.yearup.data.ProfileDao;
 import javax.sql.DataSource;
 import java.sql.*;
 
+
 @Component
 public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
 {
@@ -43,5 +44,46 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
             throw new RuntimeException(e);
         }
     }
+    @Override
+    public Profile getByUserId(int userId) // created these method line 47-return null; // implement later
+    {
+        String sql = """
+        SELECT user_id, first_name, last_name, phone, email, address, city, state, zip
+        FROM profiles
+        WHERE user_id = ?
+        """;
 
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql))
+        {
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+            {
+                Profile profile = new Profile();
+                profile.setUserId(rs.getInt("user_id"));
+                profile.setFirstName(rs.getString("first_name"));
+                profile.setLastName(rs.getString("last_name"));
+                profile.setPhone(rs.getString("phone"));
+                profile.setEmail(rs.getString("email"));
+                profile.setAddress(rs.getString("address"));
+                profile.setCity(rs.getString("city"));
+                profile.setState(rs.getString("state"));
+                profile.setZip(rs.getString("zip"));
+                return profile;
+            }
+            return null;
+        }
+        catch (SQLException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void update(int userId, Profile profile)
+    {
+        // implement later
+    }
 }
+
