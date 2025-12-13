@@ -40,9 +40,9 @@ public class CategoriesController
         // find and return all categories
         return categoryDao.getAllCategories();
     }
-
+    // FIX: path was "/id" instead of "/{id}" which caused 404 errors
     // add the appropriate annotation for a get action
-    @GetMapping("/id")
+    @GetMapping("/{id}")
     public Category getById(@PathVariable int id)
     {
         // get the category by id
