@@ -3,10 +3,7 @@ package org.yearup.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.yearup.data.ProductDao;
 import org.yearup.data.ShoppingCartDao;
@@ -67,7 +64,33 @@ public class ShoppingCartController
 
     // add a POST method to add a product to the cart - the url should be
     // https://localhost:8080/cart/products/15 (15 is the productId to be added
+    @PostMapping("/products/{productId}")
+    public ShoppingCart addProductToCart(@PathVariable int productId, Principal principal)
+    {
+        try
+        {
+            String userName = principal.getName();
+            User user = userDao.getByUserName(userName);
+            if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
 
+            int userId = user.getId();
+
+            // FIX: validate product exists before adding
+            if (productDao.getById(productId) == null)
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+            shoppingCartDao.addProduct(userId, productId); // FIX: add item to cart
+            return shoppingCartDao.getByUserId(userId);    // FIX: return updated cart
+        }
+        catch (ResponseStatusException ex)
+        {
+            throw ex; // FIX: preserve correct HTTP status codes
+        }
+        catch(Exception e)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
 
     // add a PUT method to update an existing product in the cart - the url should be
     // https://localhost:8080/cart/products/15 (15 is the productId to be updated)
