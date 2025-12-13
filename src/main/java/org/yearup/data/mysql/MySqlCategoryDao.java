@@ -1,20 +1,20 @@
 package org.yearup.data.mysql;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.yearup.data.CategoryDao;
 import org.yearup.models.Category;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
+@Repository // FIX: was @Component (still works, but Repository is correct for DAOs)
 public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
 {
+    @Autowired
     public MySqlCategoryDao(DataSource dataSource)
     {
         super(dataSource);
@@ -24,10 +24,13 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
     public List<Category> getAllCategories() // get all categories
     { List<Category> categories = new ArrayList<>();
         String sql = "SELECT * FROM categories";
-        try (Connection connection = getConnection())
+
+        // FIX: close statement/resultset with try-with-resources to avoid leaks
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet row = statement.executeQuery())
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
-            ResultSet row = statement.executeQuery();
+
             while (row.next())
             {
                 Category category = mapRow(row);
@@ -42,11 +45,11 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
     }
 
     @Override
-    public Category getById(int categoryId)
-    { String sql = "SELECT * FROM categories WHERE category_id = ?";
-        try (Connection connection = getConnection())
+    public Category getById(int categoryId) {
+        String sql = "SELECT * FROM categories WHERE category_id = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql))
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, categoryId);
             ResultSet row = statement.executeQuery();
             if (row.next())
@@ -66,9 +69,9 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
     {
         String sql = "INSERT INTO categories(name, description) VALUES (?, ?)";
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS))
         {
-            PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
             statement.setString(1, category.getName());
             statement.setString(2, category.getDescription());
             int rowsAffected = statement.executeUpdate();
