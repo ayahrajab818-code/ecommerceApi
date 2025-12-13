@@ -24,9 +24,13 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         List<Product> products = new ArrayList<>();
 
         String sql = "SELECT * FROM products " +
-                "WHERE (category_id = ? OR ? = -1) " +
-                "   AND (price <= ? OR ? = -1) " +
-                "   AND (subcategory = ? OR ? = '') ";
+                " WHERE (category_id = ? OR ? = -1) " +
+                " AND (price <= ? OR ? = -1)" + // fixed
+                " AND (sub_category = ? OR ? = '') "; // fixed
+
+
+        //    "   AND (price <= ? OR ? = -1) " +
+        // Search was using OR logic between filters instead of AND logic change line 26-29
 
         categoryId = categoryId == null ? -1 : categoryId;
         minPrice = minPrice == null ? new BigDecimal("-1") : minPrice;
@@ -63,17 +67,14 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
     public List<Product> listByCategoryId(int categoryId)
     {
         List<Product> products = new ArrayList<>();
-
         String sql = "SELECT * FROM products " +
-                    " WHERE category_id = ? ";
+                " WHERE category_id = ? ";
 
         try (Connection connection = getConnection())
         {
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, categoryId);
-
             ResultSet row = statement.executeQuery();
-
             while (row.next())
             {
                 Product product = mapRow(row);
@@ -84,7 +85,6 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         {
             throw new RuntimeException(e);
         }
-
         return products;
     }
 
@@ -97,7 +97,6 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         {
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, productId);
-
             ResultSet row = statement.executeQuery();
 
             if (row.next())
@@ -118,7 +117,6 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
 
         String sql = "INSERT INTO products(name, price, category_id, description, subcategory, image_url, stock, featured) " +
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
-
         try (Connection connection = getConnection())
         {
             PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
@@ -132,17 +130,11 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
             statement.setBoolean(8, product.isFeatured());
 
             int rowsAffected = statement.executeUpdate();
-
             if (rowsAffected > 0) {
-                // Retrieve the generated keys
-                ResultSet generatedKeys = statement.getGeneratedKeys();
-
+                ResultSet generatedKeys = statement.getGeneratedKeys(); // Retrieve the generated keys
                 if (generatedKeys.next()) {
-                    // Retrieve the auto-incremented ID
-                    int orderId = generatedKeys.getInt(1);
-
-                    // get the newly inserted category
-                    return getById(orderId);
+                    int orderId = generatedKeys.getInt(1); // Retrieve the auto-incremented ID
+                    return getById(orderId);// get the newly inserted category
                 }
             }
         }
@@ -219,7 +211,6 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         int stock = row.getInt("stock");
         boolean isFeatured = row.getBoolean("featured");
         String imageUrl = row.getString("image_url");
-
         return new Product(productId, name, price, categoryId, description, subCategory, stock, isFeatured, imageUrl);
     }
 }

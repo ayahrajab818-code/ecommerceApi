@@ -17,7 +17,6 @@ import java.util.List;
 public class ProductsController
 {
     private ProductDao productDao;
-
     @Autowired
     public ProductsController(ProductDao productDao)
     {
@@ -30,7 +29,7 @@ public class ProductsController
                                 @RequestParam(name="minPrice", required = false) BigDecimal minPrice,
                                 @RequestParam(name="maxPrice", required = false) BigDecimal maxPrice,
                                 @RequestParam(name="subCategory", required = false) String subCategory
-                                )
+    )
     {
         try
         {
@@ -41,7 +40,6 @@ public class ProductsController
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
-
     @GetMapping("{id}")
     @PreAuthorize("permitAll()")
     public Product getById(@PathVariable int id )
@@ -49,10 +47,8 @@ public class ProductsController
         try
         {
             var product = productDao.getById(id);
-
             if(product == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-
             return product;
         }
         catch(Exception ex)
@@ -60,9 +56,8 @@ public class ProductsController
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
-
     @PostMapping()
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Product addProduct(@RequestBody Product product)
     {
         try
@@ -76,12 +71,13 @@ public class ProductsController
     }
 
     @PutMapping("{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')") // firs bugs was role_Admin
     public void updateProduct(@PathVariable int id, @RequestBody Product product)
     {
         try
         {
-            productDao.create(product);
+            // productDao.create(product); ( we need to change this) i change line 83
+            productDao.update(id, product);
         }
         catch(Exception ex)
         {
@@ -90,16 +86,14 @@ public class ProductsController
     }
 
     @DeleteMapping("{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteProduct(@PathVariable int id)
     {
         try
         {
             var product = productDao.getById(id);
-
             if(product == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-
             productDao.delete(id);
         }
         catch(Exception ex)
