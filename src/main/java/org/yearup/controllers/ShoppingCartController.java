@@ -9,6 +9,7 @@ import org.yearup.data.ProductDao;
 import org.yearup.data.ShoppingCartDao;
 import org.yearup.data.UserDao;
 import org.yearup.models.ShoppingCart;
+import org.yearup.models.ShoppingCartItem;
 import org.yearup.models.User;
 
 import java.security.Principal;
@@ -95,9 +96,64 @@ public class ShoppingCartController
     // add a PUT method to update an existing product in the cart - the url should be
     // https://localhost:8080/cart/products/15 (15 is the productId to be updated)
     // the BODY should be a ShoppingCartItem - quantity is the only value that will be updated
+    @PutMapping("/products/{productId}")
+    public ShoppingCart updateProductInCart(@PathVariable int productId,
+                                            @RequestBody ShoppingCartItem item,
+                                            Principal principal)
+    {
+        try
+        {
+            String userName = principal.getName();
+            User user = userDao.getByUserName(userName);
+            if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+
+            int userId = user.getId();
+
+            // FIX: validate product exists
+            if (productDao.getById(productId) == null)
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+            // FIX: only quantity is updated
+            if (item == null || item.getQuantity() < 0)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be 0 or greater.");
+
+            shoppingCartDao.updateProduct(userId, productId, item.getQuantity()); // FIX: update quantity
+            return shoppingCartDao.getByUserId(userId);                          // FIX: return updated cart
+        }
+        catch (ResponseStatusException ex)
+        {
+            throw ex; // FIX: preserve correct HTTP status codes
+        }
+        catch(Exception e)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
 
 
     // add a DELETE method to clear all products from the current users cart
     // https://localhost:8080/cart
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearCart(Principal principal)
+    {
+        try
+        {
+            String userName = principal.getName();
+            User user = userDao.getByUserName(userName);
+            if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
 
+            int userId = user.getId();
+
+            shoppingCartDao.clearCart(userId); // FIX: clear all products from cart
+        }
+        catch (ResponseStatusException ex)
+        {
+            throw ex; // FIX: preserve correct HTTP status codes
+        }
+        catch(Exception e)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
 }

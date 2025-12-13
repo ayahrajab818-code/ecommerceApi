@@ -6,7 +6,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.yearup.data.CategoryDao;
+import org.yearup.data.ShoppingCartDao;
 import org.yearup.data.mysql.MySqlCategoryDao;
+import org.yearup.data.mysql.MySqlShoppingCartDao;
 
 @Configuration
 public class DatabaseConfig
@@ -17,6 +19,12 @@ public class DatabaseConfig
     public BasicDataSource dataSource()
     {
         return basicDataSource;
+    }
+    @Bean
+    public ShoppingCartDao shoppingCartDao()
+    {
+        // FIX: register ShoppingCartDao as a Spring bean so ShoppingCartController can be created
+        return new MySqlShoppingCartDao(basicDataSource);
     }
 
     @Bean
