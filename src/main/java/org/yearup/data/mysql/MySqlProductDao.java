@@ -43,6 +43,8 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         try (Connection connection = getConnection();
              PreparedStatement statement = connection.prepareStatement(sql))
         {
+            statement.setInt(1, categoryId);
+            statement.setInt(2, categoryId);
 
             statement.setBigDecimal(3, minPrice);
             statement.setBigDecimal(4, minPrice);
@@ -77,9 +79,9 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         String sql = "SELECT * FROM products " +
                 " WHERE category_id = ? ";
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql))
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, categoryId);
 
             try (ResultSet row = statement.executeQuery()) // FIX: close ResultSet
@@ -171,7 +173,8 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
     @Override
     public void update(int productId, Product product)
     {
-        String sql = "UPDATE products" +
+        // FIX: add space after "products" so SQL is valid
+        String sql = "UPDATE products " +
                 " SET name = ? " +
                 "   , price = ? " +
                 "   , category_id = ? " +
@@ -180,11 +183,11 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
                 "   , image_url = ? " +
                 "   , stock = ? " +
                 "   , featured = ? " +
-                " WHERE product_id = ?;";
+                " WHERE product_id = ?";
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql))
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setString(1, product.getName());
             statement.setBigDecimal(2, product.getPrice());
             statement.setInt(3, product.getCategoryId());
@@ -195,7 +198,11 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
             statement.setBoolean(8, product.isFeatured());
             statement.setInt(9, productId);
 
-            statement.executeUpdate();
+            int rowsAffected = statement.executeUpdate();
+
+            // FIX: ensure an actual row was updated
+            if (rowsAffected == 0)
+                throw new RuntimeException("Product not found for update");
         }
         catch (SQLException e)
         {
@@ -210,12 +217,16 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         String sql = "DELETE FROM products " +
                 " WHERE product_id = ?;";
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql))
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, productId);
 
-            statement.executeUpdate();
+            int rowsAffected = statement.executeUpdate();
+
+            // FIX: ensure an actual row was deleted
+            if (rowsAffected == 0)
+                throw new RuntimeException("Product not found for delete");
         }
         catch (SQLException e)
         {
