@@ -9,7 +9,7 @@ public class ShoppingCartItem
     private Product product = null;
     private int quantity = 1;
     private BigDecimal discountPercent = BigDecimal.ZERO;
-
+    private BigDecimal lineTotal = null; // FIX: store lineTotal when set
 
     public Product getProduct()
     {
@@ -49,15 +49,23 @@ public class ShoppingCartItem
 
     public BigDecimal getLineTotal()
     {
-        BigDecimal basePrice = product.getPrice();
-        BigDecimal quantity = new BigDecimal(this.quantity);
+        // FIX: if lineTotal was explicitly set (from DAO), return it
+        if (lineTotal != null)
+            return lineTotal;
 
-        BigDecimal subTotal = basePrice.multiply(quantity);
+        // otherwise compute it
+        BigDecimal basePrice = product.getPrice();
+        BigDecimal qty = new BigDecimal(this.quantity);
+
+        BigDecimal subTotal = basePrice.multiply(qty);
         BigDecimal discountAmount = subTotal.multiply(discountPercent);
 
         return subTotal.subtract(discountAmount);
     }
 
-    public void setLineTotal(BigDecimal lineTotal) {
+    public void setLineTotal(BigDecimal lineTotal)
+    {
+        // FIX: actually store the lineTotal
+        this.lineTotal = lineTotal;
     }
 }

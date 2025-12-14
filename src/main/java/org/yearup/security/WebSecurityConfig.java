@@ -1,5 +1,6 @@
 package org.yearup.security;
 
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.yearup.security.jwt.JWTConfigurer;
 import org.yearup.security.jwt.TokenProvider;
 import org.springframework.context.annotation.Bean;
@@ -49,27 +50,35 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
      * Configure security settings
-     * @param httpSecurity
+     * @param auth
      * @throws Exception
      */
     @Override
-    protected void configure(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-                // we don't need CSRF because our token is invulnerable
-                .csrf().disable()
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception { // FIX
+        auth.userDetailsService(userModelDetailsService)
+                .passwordEncoder(passwordEncoder());
+    }
 
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception { // FIX (optional)
+        http
+                .csrf().disable()
                 .exceptionHandling()
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 .accessDeniedHandler(jwtAccessDeniedHandler)
-
-                // create no session
                 .and()
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-
+                .and()
+                .authorizeRequests()
+                .antMatchers("/login", "/register").permitAll()
+                .antMatchers(HttpMethod.GET, "/products/**", "/categories/**").permitAll()
+                .anyRequest().authenticated()
                 .and()
                 .apply(securityConfigurerAdapter());
     }
+
 
     private JWTConfigurer securityConfigurerAdapter() {
         return new JWTConfigurer(tokenProvider);

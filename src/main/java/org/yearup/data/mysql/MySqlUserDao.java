@@ -1,7 +1,7 @@
 package org.yearup.data.mysql;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.yearup.data.UserDao;
 import org.yearup.models.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -11,36 +11,43 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
+@Repository // FIX: was @Component
 public class MySqlUserDao extends MySqlDaoBase implements UserDao
 {
+    private final BCryptPasswordEncoder passwordEncoder; // FIX: reuse encoder instead of new each time
+
     @Autowired
     public MySqlUserDao(DataSource dataSource)
     {
         super(dataSource);
+        this.passwordEncoder = new BCryptPasswordEncoder(); // FIX
     }
-
 
     @Override
     public User create(User newUser)
     {
         String sql = "INSERT INTO users (username, hashed_password, role) VALUES (?, ?, ?)";
-        String hashedPassword = new BCryptPasswordEncoder().encode(newUser.getPassword());
+        String hashedPassword = passwordEncoder.encode(newUser.getPassword()); // FIX: reuse encoder
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) // FIX: close PS
         {
-            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, newUser.getUsername());
             ps.setString(2, hashedPassword);
             ps.setString(3, newUser.getRole());
 
-            ps.executeUpdate();
+            int rowsAffected = ps.executeUpdate();
+
+            // FIX: ensure insert happened
+            if (rowsAffected == 0)
+                throw new RuntimeException("Creating user failed, no rows affected.");
 
             User user = getByUserName(newUser.getUsername());
-            user.setPassword("");
+            if (user == null)
+                throw new RuntimeException("Creating user failed, could not load created user.");
 
+            user.setPassword(""); // keep current behavior
             return user;
-
         }
         catch (SQLException e)
         {
@@ -52,18 +59,15 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
     public List<User> getAll()
     {
         List<User> users = new ArrayList<>();
-
         String sql = "SELECT * FROM users";
-        try (Connection connection = getConnection())
+
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet row = statement.executeQuery()) // FIX: close ResultSet
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
-
-            ResultSet row = statement.executeQuery();
-
             while (row.next())
             {
-                User user = mapRow(row);
-                users.add(user);
+                users.add(mapRow(row));
             }
         }
         catch (SQLException e)
@@ -78,49 +82,50 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
     public User getUserById(int id)
     {
         String sql = "SELECT * FROM users WHERE user_id = ?";
-        try (Connection connection = getConnection())
+
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) // FIX: close statement
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, id);
 
-            ResultSet row = statement.executeQuery();
-
-            if(row.next())
+            try (ResultSet row = statement.executeQuery()) // FIX: close ResultSet
             {
-                User user = mapRow(row);
-                return user;
+                if (row.next())
+                {
+                    return mapRow(row);
+                }
             }
         }
         catch (SQLException e)
         {
             throw new RuntimeException(e);
         }
+
         return null;
     }
 
     @Override
     public User getByUserName(String username)
     {
-        String sql = "SELECT * " +
-                " FROM users " +
-                " WHERE username = ?";
+        String sql = "SELECT * FROM users WHERE username = ?";
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) // FIX: close statement
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setString(1, username);
 
-            ResultSet row = statement.executeQuery();
-            if(row.next())
+            try (ResultSet row = statement.executeQuery()) // FIX: close ResultSet
             {
-
-                User user = mapRow(row);
-                return user;
+                if (row.next())
+                {
+                    return mapRow(row);
+                }
             }
         }
         catch (SQLException e)
         {
-            System.out.println(e);
+
+            throw new RuntimeException(e);
         }
 
         return null;
@@ -130,20 +135,13 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
     public int getIdByUsername(String username)
     {
         User user = getByUserName(username);
-
-        if(user != null)
-        {
-            return user.getId();
-        }
-
-        return -1;
+        return user != null ? user.getId() : -1;
     }
 
     @Override
     public boolean exists(String username)
     {
-        User user = getByUserName(username);
-        return user != null;
+        return getByUserName(username) != null;
     }
 
     private User mapRow(ResultSet row) throws SQLException
@@ -153,6 +151,6 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
         String hashedPassword = row.getString("hashed_password");
         String role = row.getString("role");
 
-        return new User(userId, username,hashedPassword, role);
+        return new User(userId, username, hashedPassword, role);
     }
 }

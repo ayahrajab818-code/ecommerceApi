@@ -20,11 +20,11 @@ public class LoginResponseDto {
     }
 
     @JsonProperty("token")
-    String getToken() {
+    public String getToken() { // FIX: must be public for JSON serialization
         return token;
     }
 
-    void setToken(String token) {
+    public void setToken(String token) { // FIX: make setter public for consistency
         this.token = token;
     }
 
