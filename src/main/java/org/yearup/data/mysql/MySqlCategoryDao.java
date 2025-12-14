@@ -140,9 +140,10 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
     }
 
     @Override
-    public void delete(int categoryId)  // delete category
-    { String sql = "DELETE FROM categories " +
-            " WHERE category_id = ?";
+    public void delete(int categoryId)
+    {
+        String sql = "DELETE FROM categories WHERE category_id = ?";
+
         try (Connection connection = getConnection();
              PreparedStatement statement = connection.prepareStatement(sql))
         {
@@ -151,9 +152,16 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
         }
         catch (SQLException e)
         {
+            // FIX: if category is referenced by products (foreign key constraint), don't crash with 500
+            // MySQL FK violation is SQLState 23000
+            if ("23000".equals(e.getSQLState()))
+            {
+                throw new IllegalStateException("Category is in use and cannot be deleted.");
+            }
             throw new RuntimeException(e);
         }
     }
+
 
     private Category mapRow(ResultSet row) throws SQLException
     {
