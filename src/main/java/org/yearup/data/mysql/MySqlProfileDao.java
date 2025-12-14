@@ -23,11 +23,11 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
     public Profile create(Profile profile)
     {
         String sql = "INSERT INTO profiles (user_id, first_name, last_name, phone, email, address, city, state, zip) " +
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try(Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql))
         {
-            PreparedStatement ps = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setInt(1, profile.getUserId());
             ps.setString(2, profile.getFirstName());
             ps.setString(3, profile.getLastName());
@@ -39,7 +39,6 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
             ps.setString(9, profile.getZip());
 
             ps.executeUpdate();
-
             return profile;
         }
         catch (SQLException e)
@@ -47,8 +46,10 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
             throw new RuntimeException(e);
         }
     }
+
+
     @Override
-    public Profile getByUserId(int userId) // created these method line 47-return null; // implement later
+    public Profile getByUserId(int userId)
     {
         String sql = """
         SELECT user_id, first_name, last_name, phone, email, address, city, state, zip
@@ -57,12 +58,12 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
         """;
 
         try (Connection connection = getConnection();
-             PreparedStatement ps = connection.prepareStatement(sql))
-        {
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next())
+
+            try (ResultSet rs = ps.executeQuery()) // FIX: close ResultSet
             {
+            if (rs.next()) {
                 Profile profile = new Profile();
                 profile.setUserId(rs.getInt("user_id"));
                 profile.setFirstName(rs.getString("first_name"));
@@ -75,6 +76,7 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
                 profile.setZip(rs.getString("zip"));
                 return profile;
             }
+        }
             return null;
         }
         catch (SQLException e)
@@ -86,7 +88,45 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
     @Override
     public void update(int userId, Profile profile)
     {
-        // implement later
+        // FIX: implement update (required for profile endpoint)
+        String sql = """
+        UPDATE profiles
+           SET first_name = ?
+             , last_name  = ?
+             , phone      = ?
+             , email      = ?
+             , address    = ?
+             , city       = ?
+             , state      = ?
+             , zip        = ?
+         WHERE user_id    = ?
+        """;
+
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql))
+        {
+            ps.setString(1, profile.getFirstName());
+            ps.setString(2, profile.getLastName());
+            ps.setString(3, profile.getPhone());
+            ps.setString(4, profile.getEmail());
+            ps.setString(5, profile.getAddress());
+            ps.setString(6, profile.getCity());
+            ps.setString(7, profile.getState());
+            ps.setString(8, profile.getZip());
+            ps.setInt(9, userId);
+
+            int rowsAffected = ps.executeUpdate();
+
+            // FIX: ensure a row was actually updated
+            if (rowsAffected == 0)
+            {
+                throw new RuntimeException("Profile not found for update");
+            }
+        }
+        catch (SQLException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 }
 
