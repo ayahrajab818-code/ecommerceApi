@@ -12,11 +12,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/products") // FIX: added leading "/" so routes are consistently /products
+@RequestMapping("/products") // it made sure routes are consistently /products
 @CrossOrigin
-public class ProductsController
+public class ProductsController  //controller for managing products
 {
-    private ProductDao productDao;
+    private ProductDao productDao;  //Constructor injection for ProductDao
+
     @Autowired
     public ProductsController(ProductDao productDao)
     {
@@ -31,42 +32,31 @@ public class ProductsController
                                 @RequestParam(name="subCategory", required = false) String subCategory
     )
     {
-        try
-        {
+        try {
             return productDao.search(categoryId, minPrice, maxPrice, subCategory);
-        }
-        catch(ResponseStatusException ex)
-        {
-            // FIX: don't convert known HTTP errors into 500
-            throw ex;
-        }
-        catch(Exception ex)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }  catch(ResponseStatusException ex)
+        {  throw ex;
+        }  catch(Exception ex)
+        { throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
-    @GetMapping("/{id}")// FIX: add leading "/" for clarity/consistency
+    @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
     public Product getById(@PathVariable int id )
     {
-        try
-        {
+        try {
             var product = productDao.getById(id);
-            if(product == null)
+            if (product == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             return product;
         }
         catch(ResponseStatusException ex)
-        {
-            // FIX: preserve 404 (and other) statuses
-            throw ex;
-        }
+        {   throw ex; }
         catch(Exception ex)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
-        }
+        {throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");}
     }
-    @PostMapping("")
+
+    @PostMapping()
     @PreAuthorize("hasRole('ADMIN')")
     public Product addProduct(@RequestBody Product product)
     {
@@ -76,7 +66,6 @@ public class ProductsController
         }
         catch(ResponseStatusException ex)
         {
-            // FIX: preserve any explicit HTTP statuses
             throw ex;
         }
         catch(Exception ex)
@@ -85,46 +74,38 @@ public class ProductsController
         }
     }
 
-    @PutMapping("/{id}")// FIX
+    @PutMapping("{id}")
     @PreAuthorize("hasRole('ADMIN')") // firs bugs was role_Admin
     public void updateProduct(@PathVariable int id, @RequestBody Product product)
     {
         try
-        {
-            // FIX: update should call update, not create
-            productDao.update(id, product);
-        }
+        { productDao.update(id, product);  }
+        // productDao.create(product); ( we need to change this) i change line 83
         catch(ResponseStatusException ex)
         {
-            // FIX: preserve explicit HTTP statuses
-            throw ex;
-        }
+            throw ex; }
         catch(Exception ex)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
-        }
+        {throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");}
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteProduct(@PathVariable int id)
     {
-        try
-        {
+        try {
             var product = productDao.getById(id);
-            if(product == null)
+            if (product == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             productDao.delete(id);
         }
         catch(ResponseStatusException ex)
         {
-            // FIX: preserve 404 (and other) statuses
             throw ex;
         }
-
         catch(Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
 }
+

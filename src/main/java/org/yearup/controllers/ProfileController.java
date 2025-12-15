@@ -22,7 +22,7 @@ public class ProfileController
     private UserDao userDao;
 
     @Autowired
-    public ProfileController(ProfileDao profileDao, UserDao userDao)
+    public ProfileController(ProfileDao profileDao, UserDao userDao) //Constructor injection for ProfileDao and UserDao
     {
         this.profileDao = profileDao;
         this.userDao = userDao;
@@ -33,24 +33,21 @@ public class ProfileController
     {
         try
         {
-            String userName = principal.getName();
-            User user = userDao.getByUserName(userName);
+            String userName = principal.getName();   // Get currently logged-in username
+            User user = userDao.getByUserName(userName);   // Find user in database
             if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
 
             int userId = user.getId();
-            Profile profile = profileDao.getByUserId(userId);
+            Profile profile = profileDao.getByUserId(userId); // Retrieve user's profile
 
             if(profile == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             return profile;
         }
         catch(ResponseStatusException ex)
-        {
-            throw ex;
-        }
-        catch(Exception e)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        { throw ex;
+        }  catch(Exception e)
+        {  throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
 
@@ -59,21 +56,18 @@ public class ProfileController
     {
         try
         {
-            String userName = principal.getName();
+            String userName = principal.getName();            // Get currently logged-in username
             User user = userDao.getByUserName(userName);
             if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
 
             int userId = user.getId();
-            profileDao.update(userId, profile);
+            profileDao.update(userId, profile);  // Update user's profile
 
-            return profileDao.getByUserId(userId);
+            return profileDao.getByUserId(userId); // Return updated profile
         }
         catch(ResponseStatusException ex)
-        {
-            throw ex;
-        }
-        catch(Exception e)
-        {
+        {  throw ex;
+        } catch(Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
