@@ -1,4 +1,4 @@
-package org.yearup.configurations;
+package org. yearup.configurations;
 
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,29 @@ import org.yearup.data.mysql.MySqlShoppingCartDao;
 @Configuration
 public class DatabaseConfig {
 
+<<<<<<< HEAD
     private final BasicDataSource basicDataSource;
+=======
+    @Bean
+    public BasicDataSource dataSource()
+    {
+        return basicDataSource;
+    }
+    @Bean
+    public ShoppingCartDao shoppingCartDao()
+    {
+        // FIX: register ShoppingCartDao as a Spring bean so ShoppingCartController can be created
+        return new MySqlShoppingCartDao(basicDataSource);
+    }
+
+    @Bean
+    public CategoryDao categoryDao()
+    {
+        // FIX: register CategoryDao as a Spring bean so it can be injected
+        // Used the existing MySQLCategoriesDao implementation (no new DAO created)
+        return new MySqlCategoryDao(basicDataSource);
+    }
+>>>>>>> adaf4d6 (Made few changes)
 
     @Autowired
     public DatabaseConfig(@Value("${datasource.url}") String url,
