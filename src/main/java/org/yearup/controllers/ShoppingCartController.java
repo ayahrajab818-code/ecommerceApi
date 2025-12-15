@@ -1,159 +1,81 @@
 package org.yearup.controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.yearup.data.ProductDao;
 import org.yearup.data.ShoppingCartDao;
 import org.yearup.data.UserDao;
 import org.yearup.models.ShoppingCart;
-import org.yearup.models.ShoppingCartItem;
 import org.yearup.models.User;
 
-import java.security.Principal;
+import java.util.Map;
+@CrossOrigin(origins = "http://localhost:63342")
+@RestController
+@RequestMapping("/cart")
+public class ShoppingCartController {
 
-// convert this class to a REST controller
-// only logged in users should have access to these actions
-
-@RestController // FIX: convert to REST controller
-@RequestMapping("/cart") // FIX: base endpoint is /cart
-@CrossOrigin // FIX: allow cross-site requests (matches other controllers)
-@PreAuthorize("isAuthenticated()") // FIX: only logged-in users can access cart actions
-public class ShoppingCartController
-{
-    // a shopping cart requires
     private final ShoppingCartDao shoppingCartDao;
     private final UserDao userDao;
-    private final ProductDao productDao;
 
-    @Autowired // FIX: constructor injection so Spring can create this controller
-    public ShoppingCartController(ShoppingCartDao shoppingCartDao, UserDao userDao, ProductDao productDao)
-    {
+    public ShoppingCartController(ShoppingCartDao shoppingCartDao, UserDao userDao) {
         this.shoppingCartDao = shoppingCartDao;
         this.userDao = userDao;
-        this.productDao = productDao;
     }
 
-    // each method in this controller requires a Principal object as a parameter
+    // GET http://localhost:8080/cart
     @GetMapping
-    public ShoppingCart getCart(Principal principal)
-    {
-        try
-        {
-            // FIX: use Principal to find the current user
-            String userName = principal.getName();
-            User user = userDao.getByUserName(userName);
-
-            if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-
-            int userId = user.getId();
-
-            // FIX: return the cart for the current user
-            return shoppingCartDao.getByUserId(userId);
-        }
-        catch (ResponseStatusException ex)
-        {
-            throw ex; // FIX: preserve correct HTTP status codes
-        }
-        catch(Exception e)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
-        }
+    public ShoppingCart getCart() {
+        int userId = getCurrentUserId();
+        return shoppingCartDao.getCartByUserId(userId);
     }
 
-    // add a POST method to add a product to the cart - the url should be
-    // https://localhost:8080/cart/products/15 (15 is the productId to be added
+    // POST http://localhost:8080/cart/products/15
     @PostMapping("/products/{productId}")
-    public ShoppingCart addProductToCart(@PathVariable int productId, Principal principal)
-    {
-        try
-        {
-            String userName = principal.getName();
-            User user = userDao.getByUserName(userName);
-            if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-
-            int userId = user.getId();
-
-            // FIX: validate product exists before adding
-            if (productDao.getById(productId) == null)
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-
-            shoppingCartDao.addProduct(userId, productId); // FIX: add item to cart
-            return shoppingCartDao.getByUserId(userId);    // FIX: return updated cart
-        }
-        catch (ResponseStatusException ex)
-        {
-            throw ex; // FIX: preserve correct HTTP status codes
-        }
-        catch(Exception e)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
-        }
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void addToCart(@PathVariable int productId) {
+        int userId = getCurrentUserId();
+        shoppingCartDao.addOrIncrement(userId, productId);
     }
 
-    // add a PUT method to update an existing product in the cart - the url should be
-    // https://localhost:8080/cart/products/15 (15 is the productId to be updated)
-    // the BODY should be a ShoppingCartItem - quantity is the only value that will be updated
+    // PUT http://localhost:8080/cart/products/15   body: {"quantity": 3}
     @PutMapping("/products/{productId}")
-    public ShoppingCart updateProductInCart(@PathVariable int productId,
-                                            @RequestBody ShoppingCartItem item,
-                                            Principal principal)
-    {
-        try
-        {
-            String userName = principal.getName();
-            User user = userDao.getByUserName(userName);
-            if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateCartItem(@PathVariable int productId,
+                               @RequestBody Map<String, Integer> body) {
 
-            int userId = user.getId();
-
-            // FIX: validate product exists
-            if (productDao.getById(productId) == null)
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-
-            // FIX: only quantity is updated
-            if (item == null || item.getQuantity() < 0)
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be 0 or greater.");
-
-            shoppingCartDao.updateProduct(userId, productId, item.getQuantity()); // FIX: update quantity
-            return shoppingCartDao.getByUserId(userId);                          // FIX: return updated cart
+        Integer qty = body.get("quantity");
+        if (qty == null) {
+            throw new IllegalArgumentException("quantity is required");
         }
-        catch (ResponseStatusException ex)
-        {
-            throw ex; // FIX: preserve correct HTTP status codes
-        }
-        catch(Exception e)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
-        }
+
+        int userId = getCurrentUserId();
+        shoppingCartDao.updateQuantityIfExists(userId, productId, qty);
     }
 
-
-    // add a DELETE method to clear all products from the current users cart
-    // https://localhost:8080/cart
+    // DELETE http://localhost:8080/cart
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void clearCart(Principal principal)
-    {
-        try
-        {
-            String userName = principal.getName();
-            User user = userDao.getByUserName(userName);
-            if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+    public void clearCart() {
+        int userId = getCurrentUserId();
+        shoppingCartDao.clearCart(userId);
+    }
 
-            int userId = user.getId();
+    private int getCurrentUserId() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userDao.getByUserName(username);
 
-            shoppingCartDao.clearCart(userId); // FIX: clear all products from cart
+        if (user == null) {
+            // This prevents “mystery 500s” and tells you it’s an auth/user lookup issue
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found: " + username);
         }
-        catch (ResponseStatusException ex)
-        {
-            throw ex; // FIX: preserve correct HTTP status codes
-        }
-        catch(Exception e)
-        {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
-        }
+
+        return user.getId();
     }
 }
+
+
+
+
+
