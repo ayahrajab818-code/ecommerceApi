@@ -43,7 +43,7 @@ public class ShoppingCart
         return items.values()
                 .stream()
                 .map(ShoppingCartItem::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce( BigDecimal.ZERO, (lineTotal, subTotal) -> subTotal.add(lineTotal));
     }
 
     public void setTotal(BigDecimal total)

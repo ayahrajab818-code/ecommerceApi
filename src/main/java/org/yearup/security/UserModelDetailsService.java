@@ -1,5 +1,6 @@
 package org.yearup.security;
 
+
 import org.yearup.data.UserDao;
 import org.yearup.models.User;
 import org.slf4j.Logger;
@@ -8,7 +9,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -32,32 +32,18 @@ public class UserModelDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(final String login) {
         log.debug("Authenticating user '{}'", login);
         String lowercaseLogin = login.toLowerCase();
-
-        User user = userDao.getByUserName(lowercaseLogin);
-
-        // FIX: handle user not found properly
-        if (user == null) {
-            throw new UsernameNotFoundException("User '" + lowercaseLogin + "' not found");
-        }
-
-        return createSpringSecurityUser(lowercaseLogin, user);
+        return createSpringSecurityUser(lowercaseLogin, userDao.getByUserName(lowercaseLogin));
     }
 
-    private org.springframework.security.core.userdetails.User createSpringSecurityUser(
-            String lowercaseLogin, User user) {
-
+    private org.springframework.security.core.userdetails.User createSpringSecurityUser(String lowercaseLogin, User user) {
         if (!user.isActivated()) {
             throw new UserNotActivatedException("User " + lowercaseLogin + " was not activated");
         }
-
         List<GrantedAuthority> grantedAuthorities = user.getAuthorities().stream()
                 .map(authority -> new SimpleGrantedAuthority(authority.getName()))
                 .collect(Collectors.toList());
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
+        return new org.springframework.security.core.userdetails.User(user.getUsername(),
                 user.getPassword(),
-                grantedAuthorities
-        );
+                grantedAuthorities);
     }
 }
