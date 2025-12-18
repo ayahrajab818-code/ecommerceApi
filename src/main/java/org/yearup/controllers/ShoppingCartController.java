@@ -19,7 +19,7 @@ import java.security.Principal;
 
 // All endpoints in this controller start with /cart
 @RequestMapping("/cart")
-
+// FIX: allow cross-site requests (matches other controllers)
 // Allows the front-end (different origin/port) to call these endpoints
 @CrossOrigin
 

@@ -93,6 +93,8 @@ public class CategoriesController
         return created;
     }
 
+
+    // FIX: path was "/id" instead of "/{id}" which caused 404 errors
     // PUT /categories/{id} (ADMIN only)
     // Updates an existing category
     @PutMapping("/{id}")
