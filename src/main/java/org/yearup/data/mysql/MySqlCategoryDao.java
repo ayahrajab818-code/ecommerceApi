@@ -112,10 +112,6 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao{
                 throw new RuntimeException("Category not found for update");
             }
 
-
-//            int rowsAffected = statement.executeUpdate();
-//            if (rowsAffected == 0) {
-//                throw new RuntimeException("Category not found for update");
         }
         catch (SQLException e)
         {
