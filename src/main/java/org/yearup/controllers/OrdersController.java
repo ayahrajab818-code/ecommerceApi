@@ -110,8 +110,10 @@ public class OrdersController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found.");
         }
 
+        int userId = user.getId();
+
         // 2) Load the user's shopping cart from the database
-        ShoppingCart cart = cartDao.getByUserId(user.getId());
+        ShoppingCart cart = cartDao.getByUserId(userId);
 
         // FIXED: Prevent checkout if cart is empty, return 400 Bad Request
         if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {
@@ -119,10 +121,10 @@ public class OrdersController {
         }
 
         // 3) Create the order in the database (and insert order line items)
-        Order created = ordersDao.createOrderFromCart(user.getId(), cart);
+        Order created = ordersDao.createOrderFromCart(userId, cart);
 
         // 4) Clear the cart so it is empty after checkout
-        cartDao.clearCart(user.getId());
+        cartDao.clearCart(userId);
 
         // Return the created order (can include id, totals, items depending on DAO)
         return created;
